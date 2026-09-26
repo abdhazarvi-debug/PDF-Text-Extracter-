@@ -8,3 +8,6 @@ OCR model files are fetched during CI and packaged into the APK, so the built ap
 
 
 Build status: Android APK is built automatically from main.
+
+
+UI interpolation fix applied.
