@@ -106,7 +106,7 @@ class PdfProcessor(private val context: Context) {
                             val width = (page.width * scale).toInt().coerceAtMost(3200)
                             val height = (page.height * scale).toInt().coerceAtMost(4400)
                             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_OCR)
+                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                             page.close()
 
                             tess!!.setImage(bitmap)
