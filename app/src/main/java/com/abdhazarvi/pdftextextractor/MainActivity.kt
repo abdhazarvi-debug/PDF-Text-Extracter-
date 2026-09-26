@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
             if (results.isEmpty()) tvStatus.text = "Run extraction first."
             else {
                 val ext = spinnerFormat.selectedItem.toString().lowercase(Locale.US)
-                saveLauncher.launch("pdf-extracted.K{ext}")
+                saveLauncher.launch("pdf-extracted.${ext}")
             }
         }
     }
@@ -115,7 +115,7 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshQueue() {
         tvQueue.text = if (selected.isEmpty()) "No PDF selected."
-        else selected.mapIndexed { i, p -> "K{i + 1}. K{p.displayName}" }.joinToString("\n")
+        else selected.mapIndexed { i, p -> "${i + 1}. ${p.displayName}" }.joinToString("\n")
     }
 
     private fun languages(): String = buildList {
@@ -145,7 +145,7 @@ class MainActivity : ComponentActivity() {
         job = lifecycleScope.launch {
             try {
                 selected.forEachIndexed { fileIndex, pdf ->
-                    tvStatus.text = "Processing K{fileIndex + 1}/K{selected.size}: K{pdf.displayName}"
+                    tvStatus.text = "Processing ${fileIndex + 1}/${selected.size}: ${pdf.displayName}"
                     val result = processor.process(pdf, mode, languages(), etPages.text.toString()) { done, total, preview ->
                         val percent = (((fileIndex + done.toDouble() / total) / selected.size) * 100).toInt()
                         progress.progress = percent
@@ -155,11 +155,11 @@ class MainActivity : ComponentActivity() {
                     tvPreview.text = renderPreview(result)
                 }
                 progress.progress = 100
-                tvStatus.text = "Done — K{results.size} file(s)."
+                tvStatus.text = "Done — ${results.size} file(s)."
             } catch (_: CancellationException) {
                 tvStatus.text = "Cancelled."
             } catch (e: Exception) {
-                tvStatus.text = "Error: K{e.message ?: e.javaClass.simpleName}"
+                tvStatus.text = "Error: ${e.message ?: e.javaClass.simpleName}"
             } finally {
                 btnProcess.isEnabled = true
                 btnCancel.isEnabled = false
@@ -168,21 +168,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun renderPreview(doc: DocumentResult): String =
-        doc.pages.joinToString("\n\n") { "— Page K{it.pageNumber} —\nK{it.text}" }
+        doc.pages.joinToString("\n\n") { "— Page ${it.pageNumber} —\n${it.text}" }
 
     private fun renderOutput(format: String): String = when (format.uppercase(Locale.US)) {
         "JSON" -> processor.toJson(results)
         "MD" -> results.joinToString("\n\n") { doc ->
-            "# K{doc.fileName}\n\n" + doc.pages.joinToString("\n\n") { p ->
-                "## Page K{p.pageNumber}\n\nK{p.text}"
+            "# ${doc.fileName}\n\n" + doc.pages.joinToString("\n\n") { p ->
+                "## Page ${p.pageNumber}\n\n${p.text}"
             }
         }
         "HTML" -> buildString {
             append("<!doctype html><html><head><meta charset=\"utf-8\"></head><body>")
             results.forEach { doc ->
-                append("<h1>K{escape(doc.fileName)}</h1>")
+                append("<h1>${escape(doc.fileName)}</h1>")
                 doc.pages.forEach { p ->
-                    append("<h2>Page K{p.pageNumber}</h2><pre dir=\"auto\">K{escape(p.text)}</pre>")
+                    append("<h2>Page ${p.pageNumber}</h2><pre dir=\"auto\">${escape(p.text)}</pre>")
                 }
             }
             append("</body></html>")
@@ -200,8 +200,8 @@ class MainActivity : ComponentActivity() {
             }
         }
         else -> results.joinToString("\n\n") { doc ->
-            "===== K{doc.fileName} =====\n" +
-                doc.pages.joinToString("\n\n") { p -> "----- Page K{p.pageNumber} -----\nK{p.text}" }
+            "===== ${doc.fileName} =====\n" +
+                doc.pages.joinToString("\n\n") { p -> "----- Page ${p.pageNumber} -----\n${p.text}" }
         }
     }
 
