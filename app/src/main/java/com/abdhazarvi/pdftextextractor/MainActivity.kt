@@ -9,12 +9,15 @@ import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.Spinner
 import android.widget.TextView
+import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -43,7 +46,7 @@ class MainActivity : ComponentActivity() {
             runCatching {
                 contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            val name = uri.lastPathSegment?.substringAfterLast('/') ?: "document.pdf"
+            val name = displayNameFor(uri)
             if (selected.none { it.uri == uri }) selected += SelectedPdf(name, uri)
         }
         refreshQueue()
@@ -113,6 +116,20 @@ class MainActivity : ComponentActivity() {
             listOf("TXT", "JSON", "MD", "HTML", "CSV"))
     }
 
+    private fun displayNameFor(uri: android.net.Uri): String {
+        val projection = arrayOf(OpenableColumns.DISPLAY_NAME)
+        val resolved = runCatching {
+            contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
+            }
+        }.getOrNull()
+
+        return resolved?.takeIf { it.isNotBlank() }
+            ?: uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+            ?: "document.pdf"
+    }
+
     private fun refreshQueue() {
         tvQueue.text = if (selected.isEmpty()) "No PDF selected."
         else selected.mapIndexed { i, p -> "${i + 1}. ${p.displayName}" }.joinToString("\n")
@@ -148,8 +165,10 @@ class MainActivity : ComponentActivity() {
                     tvStatus.text = "Processing ${fileIndex + 1}/${selected.size}: ${pdf.displayName}"
                     val result = processor.process(pdf, mode, languages(), etPages.text.toString()) { done, total, preview ->
                         val percent = (((fileIndex + done.toDouble() / total) / selected.size) * 100).toInt()
-                        progress.progress = percent
-                        tvPreview.text = preview
+                        withContext(Dispatchers.Main.immediate) {
+                            progress.progress = percent
+                            tvPreview.text = preview
+                        }
                     }
                     results += result
                     tvPreview.text = renderPreview(result)
